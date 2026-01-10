@@ -286,6 +286,7 @@ python test_integrations.py --all
 - Prioritize reliability over features (broken automation worse than no automation)
 - Industry expertise > technical complexity (solve real problems simply)
 - Measure ROI obsessively (customers need to see value immediately)
+
 ---
 
 # Ralph Loop Development Methodology
@@ -329,6 +330,117 @@ Phase 5: Update README with API docs
 Run tests after each phase. Fix any failures before proceeding.
 Output <promise>COMPLETE</promise> when all phases pass.
 ```
+
+---
+
+## MCP Server Configuration
+
+Model Context Protocol (MCP) servers extend Claude Code with specialized capabilities.
+
+### Recommended MCP Servers
+
+| Server | Purpose | Install Command |
+|--------|---------|-----------------|
+| **Puppeteer** | Browser automation, screenshots, web scraping | `claude mcp add puppeteer -- npx -y @anthropic-ai/mcp-puppeteer` |
+| **Supabase** | Database operations, auth, storage | `claude mcp add supabase -- npx -y @supabase/mcp-server-supabase` |
+| **GitHub** | Repo management, issues, PRs | `claude mcp add github -- npx -y @anthropic-ai/mcp-github` |
+| **Filesystem** | Extended file operations | `claude mcp add filesystem -- npx -y @anthropic-ai/mcp-filesystem` |
+
+### MCP Configuration File
+
+Create `.mcp.json` in project root:
+
+```json
+{
+  "mcpServers": {
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@anthropic-ai/mcp-puppeteer"]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase@latest", "--supabase-url", "${SUPABASE_URL}"],
+      "env": {
+        "SUPABASE_SERVICE_ROLE_KEY": "${SUPABASE_SERVICE_ROLE_KEY}"
+      }
+    }
+  }
+}
+```
+
+### Puppeteer Capabilities
+
+With Puppeteer MCP, Claude can:
+- **Navigate** - Open URLs, click links, fill forms
+- **Screenshot** - Capture full page or element screenshots
+- **Extract** - Scrape text, attributes, HTML content
+- **Execute** - Run JavaScript in browser context
+- **Test** - Validate UI behavior, check responsive layouts
+
+**Example prompt:**
+```
+Use Puppeteer to:
+1. Navigate to https://example.com
+2. Take a screenshot of the homepage
+3. Extract all product names from the catalog
+4. Save results to data/products.json
+```
+
+---
+
+## GitHub Actions CI
+
+All BlueDuckLLC repos should have CI workflows for automated testing.
+
+### Standard CI Workflow
+
+Create `.github/workflows/ci.yml`:
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test --if-present
+```
+
+### CI Requirements for Ralph Loop
+
+Before marking a task COMPLETE, verify:
+- [ ] `npm run build` passes
+- [ ] `npm run lint` passes (if configured)
+- [ ] `npm test` passes (if tests exist)
+- [ ] No TypeScript errors (`npx tsc --noEmit`)
 
 ---
 
@@ -379,6 +491,7 @@ Feature is COMPLETE when:
 - [ ] Tests pass (coverage >80%)
 - [ ] No TypeScript errors
 - [ ] Build succeeds
+- [ ] CI workflow passes
 - [ ] README updated if needed
 Output: <promise>COMPLETE</promise>
 ```
@@ -390,6 +503,7 @@ Bug fix is COMPLETE when:
 - [ ] Fix implemented
 - [ ] Regression test added
 - [ ] All existing tests pass
+- [ ] CI workflow passes
 Output: <promise>COMPLETE</promise>
 ```
 
@@ -400,6 +514,7 @@ Refactor is COMPLETE when:
 - [ ] No behavior changes (tests verify)
 - [ ] All tests pass
 - [ ] No new TypeScript errors
+- [ ] CI workflow passes
 Output: <promise>COMPLETE</promise>
 ```
 
@@ -412,6 +527,7 @@ Output: <promise>COMPLETE</promise>
 3. **Unlimited iterations** - Always set `--max-iterations`
 4. **Monolithic tasks** - Break into phases
 5. **Context pollution** - Let loops refresh context naturally
+6. **Ignoring CI** - Always verify CI passes before completion
 
 ---
 
@@ -423,7 +539,10 @@ Output: <promise>COMPLETE</promise>
 | `/cancel-ralph` | Stop current loop |
 | `--max-iterations N` | Safety limit |
 | `--completion-promise "X"` | Custom exit phrase |
+| `claude mcp list` | Show configured MCP servers |
+| `claude mcp add <name>` | Add MCP server |
 
 ---
 
 *Ralph Loop methodology based on [Geoffrey Huntley's original technique](https://ghuntley.com/ralph/)*
+*MCP Puppeteer: [Documentation](https://github.com/anthropics/anthropic-quickstarts/tree/main/mcp-puppeteer)*
